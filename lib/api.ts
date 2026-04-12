@@ -1,4 +1,8 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://hiregenei-backend.onrender.com'
+    : 'http://localhost:8000')
+const API_BASE = `${DEFAULT_API_URL}/api`
 
 export interface ResumeResponse {
   skills: string[]
