@@ -1,17 +1,78 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Spinner } from '@/components/ui/spinner'
-import { AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react'
+import { AlertCircle, Briefcase, ExternalLink, MapPin, Clock, Search, SlidersHorizontal, Loader2, X, Plus, Building2 } from 'lucide-react'
 import { APIClient, Job, JobsRequest } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 const WORK_TYPES = ['On-site', 'Hybrid', 'Remote']
 const EXP_LEVELS = ['Internship', 'Entry level', 'Associate', 'Mid-senior level']
 const TIME_FILTERS = ['Past 24 hours', 'Past week', 'Past month']
+const DEFAULT_CITIES = ['Delhi', 'Mumbai', 'Pune', 'Chandigarh', 'Bangalore', 'Hyderabad']
+
+const ROLE_ICONS: Record<string, string> = {
+  'machine learning': '🤖',
+  'data': '📊',
+  'frontend': '🎨',
+  'backend': '⚙️',
+  'devops': '🚀',
+  'ai': '✨',
+  'full stack': '🔗',
+  'product': '📋',
+  'design': '🎯',
+  'security': '🔒',
+}
+
+function getRoleEmoji(role: string) {
+  const lower = role.toLowerCase()
+  for (const [key, icon] of Object.entries(ROLE_ICONS)) {
+    if (lower.includes(key)) return icon
+  }
+  return '💼'
+}
+
+function JobCardSkeleton() {
+  return (
+    <div className="glass-card rounded-2xl p-5 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-2">
+          <div className="skeleton h-4 w-2/3 rounded" />
+          <div className="skeleton h-3 w-1/2 rounded" />
+        </div>
+        <div className="skeleton h-6 w-16 rounded-full" />
+      </div>
+      <div className="flex gap-2">
+        <div className="skeleton h-5 w-14 rounded-full" />
+        <div className="skeleton h-5 w-20 rounded-full" />
+      </div>
+      <div className="skeleton h-8 w-24 rounded-xl" />
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center fade-in">
+      <div className="w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+        <Search className="h-9 w-9 text-primary/40" />
+      </div>
+      <h3 className="font-semibold text-base mb-2">No jobs found yet</h3>
+      <p className="text-sm text-muted-foreground max-w-xs">Configure your filters and click "Start Scraping" to discover relevant job openings</p>
+    </div>
+  )
+}
+
+function NoResults() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center fade-in">
+      <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
+        <Briefcase className="h-7 w-7 text-amber-400/60" />
+      </div>
+      <h3 className="font-semibold text-sm mb-1">No results found</h3>
+      <p className="text-xs text-muted-foreground max-w-xs">Try broadening your filters or selecting different job roles</p>
+    </div>
+  )
+}
 
 interface JobScraperProps {
   defaultRoles?: string[]
@@ -19,11 +80,9 @@ interface JobScraperProps {
 
 export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
   const [selectedRoles, setSelectedRoles] = useState<string[]>(defaultRoles)
-
-  useEffect(() => {
-    setSelectedRoles(defaultRoles)
-  }, [defaultRoles])
-  const [cities, setCities] = useState('Delhi,Mumbai,Pune,Chandigarh')
+  const [customRole, setCustomRole] = useState('')
+  const [cities, setCities] = useState<string[]>(['Delhi', 'Mumbai', 'Pune', 'Chandigarh'])
+  const [customCity, setCustomCity] = useState('')
   const [country, setCountry] = useState('India')
   const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>(['Remote'])
   const [selectedExpLevels, setSelectedExpLevels] = useState<string[]>(['Entry level'])
@@ -31,226 +90,319 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
   const [loading, setLoading] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [showResults, setShowResults] = useState(false)
+  const [hasScraped, setHasScraped] = useState(false)
+  const [progress, setProgress] = useState(0)
 
-  const handleRoleChange = (role: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    )
+  useEffect(() => { setSelectedRoles(defaultRoles) }, [defaultRoles])
+
+  const toggle = <T extends string>(arr: T[], item: T): T[] =>
+    arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item]
+
+  const addCustomRole = () => {
+    if (customRole.trim() && !selectedRoles.includes(customRole.trim())) {
+      setSelectedRoles(prev => [...prev, customRole.trim()])
+      setCustomRole('')
+    }
   }
 
-  const handleWorkTypeChange = (type: string) => {
-    setSelectedWorkTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
-    )
-  }
-
-  const handleExpLevelChange = (level: string) => {
-    setSelectedExpLevels((prev) =>
-      prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]
-    )
+  const addCustomCity = () => {
+    if (customCity.trim() && !cities.includes(customCity.trim())) {
+      setCities(prev => [...prev, customCity.trim()])
+      setCustomCity('')
+    }
   }
 
   const handleScrape = async () => {
-    if (selectedRoles.length === 0) {
-      setError('Please select at least one role')
-      return
-    }
+    if (selectedRoles.length === 0) { setError('Please select at least one role'); return }
+    setLoading(true); setError(null); setHasScraped(true); setJobs([]); setProgress(0)
 
-    setLoading(true)
-    setError(null)
-    setShowResults(true)
+    // Fake progress animation
+    const interval = setInterval(() => {
+      setProgress(p => Math.min(p + Math.random() * 18, 90))
+    }, 400)
 
     try {
       const request: JobsRequest = {
         roles: selectedRoles,
-        cities,
+        cities: cities.join(','),
         country,
         work_types: selectedWorkTypes,
         exp_levels: selectedExpLevels,
         time_filter: timeFilter,
       }
-
       const response = await APIClient.scrapeJobs(request)
       setJobs(response.jobs)
+      setProgress(100)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to scrape jobs')
-      setShowResults(false)
+      setHasScraped(false)
     } finally {
+      clearInterval(interval)
       setLoading(false)
     }
   }
 
+  const ChipButton = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      className={cn(
+        'px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150',
+        active
+          ? 'bg-primary/20 text-primary border-primary/30 shadow-[0_0_10px_oklch(0.65_0.22_270/0.2)]'
+          : 'bg-white/[0.03] text-muted-foreground border-border/40 hover:border-border hover:text-foreground hover:bg-white/5'
+      )}
+    >
+      {label}
+    </button>
+  )
+
   return (
-    <div className="space-y-4">
-      <Card className="border-border">
-        <CardHeader>
-          <CardTitle>Job Scraper</CardTitle>
-          <CardDescription>Configure filters and scrape relevant job listings</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <div className="flex gap-5 h-full fade-in">
+      {/* Left: Filters panel */}
+      <div className="w-72 flex-shrink-0 space-y-4">
+        <div className="glass-card rounded-2xl p-5 space-y-5 sticky top-0">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Filters</h3>
+          </div>
+
           {/* Roles */}
           <div>
-            <label className="text-sm font-semibold block mb-3">Job Roles</label>
-            {selectedRoles.length === 0 && defaultRoles.length === 0 ? (
-              <p className="text-xs text-muted-foreground mb-3">No roles from resume. Enter roles manually or use recommended ones.</p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              {defaultRoles.map((role) => (
-                <Badge
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Job Roles</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selectedRoles.map(role => (
+                <button
                   key={role}
-                  variant={selectedRoles.includes(role) ? 'default' : 'outline'}
-                  className="cursor-pointer py-1"
-                  onClick={() => handleRoleChange(role)}
+                  onClick={() => setSelectedRoles(prev => prev.filter(r => r !== role))}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-primary/15 text-primary border border-primary/25 hover:bg-destructive/15 hover:text-destructive hover:border-destructive/25 transition-all group"
                 >
+                  <span>{getRoleEmoji(role)}</span>
                   {role}
-                </Badge>
+                  <X className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
               ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={customRole}
+                onChange={e => setCustomRole(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustomRole()}
+                placeholder="Add role..."
+                className="flex-1 bg-white/[0.04] border border-border/40 rounded-xl px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 focus:bg-primary/5 transition-all"
+              />
+              <button
+                onClick={addCustomRole}
+                className="px-2.5 py-1.5 rounded-xl bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 transition-all"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
 
           {/* Cities */}
           <div>
-            <label className="text-sm font-semibold block mb-2">Cities</label>
-            <Input
-              value={cities}
-              onChange={(e) => setCities(e.target.value)}
-              placeholder="Enter cities (comma separated)"
-              className="bg-background border-border"
-            />
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Cities</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {cities.map(city => (
+                <button
+                  key={city}
+                  onClick={() => setCities(prev => prev.filter(c => c !== city))}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all group"
+                >
+                  <MapPin className="h-2.5 w-2.5" />
+                  {city}
+                  <X className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={customCity}
+                onChange={e => setCustomCity(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustomCity()}
+                placeholder="Add city..."
+                className="flex-1 bg-white/[0.04] border border-border/40 rounded-xl px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 transition-all"
+              />
+              <button onClick={addCustomCity} className="px-2.5 py-1.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all">
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Country */}
           <div>
-            <label className="text-sm font-semibold block mb-2">Country</label>
-            <Input
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Country</label>
+            <input
               value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              placeholder="Enter country"
-              className="bg-background border-border"
+              onChange={e => setCountry(e.target.value)}
+              className="w-full bg-white/[0.04] border border-border/40 rounded-xl px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 transition-all"
             />
           </div>
 
-          {/* Work Types */}
+          {/* Work Type */}
           <div>
-            <label className="text-sm font-semibold block mb-3">Work Type</label>
-            <div className="flex flex-wrap gap-2">
-              {WORK_TYPES.map((type) => (
-                <Badge
-                  key={type}
-                  variant={selectedWorkTypes.includes(type) ? 'default' : 'outline'}
-                  className="cursor-pointer py-1"
-                  onClick={() => handleWorkTypeChange(type)}
-                >
-                  {type}
-                </Badge>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Work Type</label>
+            <div className="flex flex-wrap gap-1.5">
+              {WORK_TYPES.map(t => (
+                <ChipButton key={t} label={t} active={selectedWorkTypes.includes(t)} onClick={() => setSelectedWorkTypes(prev => toggle(prev, t))} />
               ))}
             </div>
           </div>
 
-          {/* Experience Levels */}
+          {/* Experience Level */}
           <div>
-            <label className="text-sm font-semibold block mb-3">Experience Level</label>
-            <div className="flex flex-wrap gap-2">
-              {EXP_LEVELS.map((level) => (
-                <Badge
-                  key={level}
-                  variant={selectedExpLevels.includes(level) ? 'default' : 'outline'}
-                  className="cursor-pointer py-1"
-                  onClick={() => handleExpLevelChange(level)}
-                >
-                  {level}
-                </Badge>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Experience</label>
+            <div className="flex flex-wrap gap-1.5">
+              {EXP_LEVELS.map(l => (
+                <ChipButton key={l} label={l} active={selectedExpLevels.includes(l)} onClick={() => setSelectedExpLevels(prev => toggle(prev, l))} />
               ))}
             </div>
           </div>
 
           {/* Time Filter */}
           <div>
-            <label className="text-sm font-semibold block mb-2">Time Filter</label>
-            <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-            >
-              {TIME_FILTERS.map((filter) => (
-                <option key={filter} value={filter}>
-                  {filter}
-                </option>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Posted</label>
+            <div className="flex flex-col gap-1.5">
+              {TIME_FILTERS.map(f => (
+                <ChipButton key={f} label={f} active={timeFilter === f} onClick={() => setTimeFilter(f)} />
               ))}
-            </select>
+            </div>
           </div>
 
           {error && (
-            <div className="flex gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="flex gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+              <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+              <p className="text-xs text-destructive">{error}</p>
             </div>
           )}
 
-          <Button onClick={handleScrape} disabled={loading || selectedRoles.length === 0} className="w-full">
+          <button
+            onClick={handleScrape}
+            disabled={loading || selectedRoles.length === 0}
+            className="w-full btn-gradient rounded-2xl py-3 text-sm font-semibold text-white flex items-center justify-center gap-2"
+          >
             {loading ? (
               <>
-                <Spinner className="mr-2 h-4 w-4" />
-                Scraping Jobs...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Scraping...
               </>
             ) : (
-              'Start Scraping'
+              <>
+                <Search className="h-4 w-4" />
+                Start Scraping
+              </>
             )}
-          </Button>
-        </CardContent>
-      </Card>
+          </button>
+          <p className="text-center text-[10px] text-muted-foreground/40">
+            ⏱ Scraping may take 15–60 seconds
+          </p>
+        </div>
+      </div>
 
-      {/* Results */}
-      {showResults && (
-        <Card className="border-border">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Jobs Found</CardTitle>
-                <CardDescription>{jobs.length} positions matching your criteria</CardDescription>
-              </div>
-              {!loading && jobs.length > 0 && (
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
+      {/* Right: Results panel */}
+      <div className="flex-1 min-w-0">
+        {/* Results header */}
+        {hasScraped && (
+          <div className="mb-4 fade-in">
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Spinner className="h-6 w-6" />
-              </div>
-            ) : jobs.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No jobs found matching your criteria</p>
-            ) : (
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {jobs.map((job, idx) => (
-                  <div key={idx} className="p-4 border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-sm">{job.title}</h4>
-                        <p className="text-xs text-muted-foreground">{job.company}</p>
-                      </div>
-                      <Badge variant="secondary" className="flex-shrink-0">{job.location}</Badge>
-                    </div>
-                    {job.link && (
-                      <a
-                        href={job.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        View Job
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
+              <div className="glass-card rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                    Scraping job listings...
                   </div>
-                ))}
+                  <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-border/50 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${progress}%`,
+                      background: 'linear-gradient(90deg, oklch(0.58 0.24 270), oklch(0.72 0.18 190))'
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Searching across {selectedRoles.length} roles in {cities.length} cities...</p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-sm font-semibold">
+                  <span className="gradient-text">{jobs.length}</span>
+                  <span className="text-muted-foreground ml-1.5 font-normal">positions found</span>
+                </p>
+                <p className="text-xs text-muted-foreground">{selectedRoles.join(', ')}</p>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+
+        {/* Job cards */}
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => <JobCardSkeleton key={i} />)}
+          </div>
+        ) : !hasScraped ? (
+          <EmptyState />
+        ) : jobs.length === 0 ? (
+          <NoResults />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {jobs.map((job, idx) => (
+              <div
+                key={idx}
+                className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_20px_oklch(0.65_0.22_270/0.1)] transition-all duration-200 group fade-in flex flex-col gap-3"
+              >
+                <div className="flex items-start gap-3">
+                  {/* Company logo placeholder */}
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-border/40 flex items-center justify-center flex-shrink-0 text-lg">
+                    {getRoleEmoji(job.title)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-sm leading-tight truncate group-hover:text-primary transition-colors">{job.title}</h4>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Building2 className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
+                      <p className="text-xs text-muted-foreground truncate">{job.company}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1.5">
+                  {job.location && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                      <MapPin className="h-2.5 w-2.5" />
+                      {job.location}
+                    </span>
+                  )}
+                  {selectedWorkTypes[0] && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                      {selectedWorkTypes[0]}
+                    </span>
+                  )}
+                  {selectedExpLevels[0] && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                      {selectedExpLevels[0]}
+                    </span>
+                  )}
+                </div>
+
+                {/* Apply button */}
+                {job.link && (
+                  <a
+                    href={job.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 hover:shadow-[0_0_12px_oklch(0.65_0.22_270/0.3)] transition-all w-fit"
+                  >
+                    Apply Now
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
