@@ -10,12 +10,12 @@ interface ResumeAnalyzerProps {
 }
 
 const SKILL_COLORS = [
-  'bg-violet-500/15 text-violet-300 border-violet-500/25',
-  'bg-cyan-500/15 text-cyan-300 border-cyan-500/25',
-  'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-  'bg-amber-500/15 text-amber-300 border-amber-500/25',
-  'bg-pink-500/15 text-pink-300 border-pink-500/25',
-  'bg-blue-500/15 text-blue-300 border-blue-500/25',
+  'bg-primary/12 text-primary border-primary/25',
+  'bg-accent/12 text-accent border-accent/25',
+  'bg-emerald-400/12 text-emerald-300 border-emerald-400/25',
+  'bg-amber-400/12 text-amber-300 border-amber-400/25',
+  'bg-rose-400/12 text-rose-300 border-rose-400/25',
+  'bg-sky-400/12 text-sky-300 border-sky-400/25',
 ]
 
 const ROLE_ICONS: Record<string, string> = {
@@ -44,12 +44,12 @@ function CircularProgress({ score }: { score: number }) {
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
 
-  const color = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444'
+  const color = score >= 80 ? 'oklch(0.78 0.13 160)' : score >= 60 ? 'oklch(0.81 0.13 82)' : 'oklch(0.65 0.18 24)'
 
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
       <svg className="absolute" width="144" height="144" viewBox="0 0 144 144">
-        <circle cx="72" cy="72" r={radius} stroke="oklch(0.22 0.015 255)" strokeWidth="8" fill="none" />
+        <circle cx="72" cy="72" r={radius} stroke="oklch(0.26 0.012 70)" strokeWidth="8" fill="none" />
         <circle
           cx="72" cy="72" r={radius}
           stroke={color} strokeWidth="8" fill="none"
@@ -60,8 +60,8 @@ function CircularProgress({ score }: { score: number }) {
         />
       </svg>
       <div className="text-center z-10">
-        <span className="text-3xl font-bold" style={{ color }}>{score}</span>
-        <span className="text-sm text-muted-foreground block -mt-0.5">/100</span>
+        <span className="text-4xl font-bold font-display" style={{ color }}>{score}</span>
+        <span className="text-sm text-muted-foreground block -mt-1">/100</span>
       </div>
     </div>
   )
@@ -73,9 +73,9 @@ function SkeletonResults() {
       <div className="text-center py-6">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary">
           <div className="w-3 h-3 rounded-full bg-primary/60 spin-slow" />
-          AI is analyzing your resume...
+          Reading your resume…
         </div>
-        <p className="text-xs text-muted-foreground mt-2">This may take a moment</p>
+        <p className="text-xs text-muted-foreground mt-2">Pulling out skills and matching roles</p>
       </div>
       <div className="grid grid-cols-3 gap-4">
         {[1,2,3].map(i => <div key={i} className="skeleton h-28 rounded-2xl" />)}
@@ -136,7 +136,7 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  // Mock score for display (backend may not return score, so default to 78)
+  // Backend may not return a score; default for display only
   const score = (result as any)?.score ?? 78
 
   if (loading) {
@@ -147,52 +147,53 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
     return (
       <div className="space-y-5 fade-in">
         {/* Success banner */}
-        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-          <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-400/8 border border-emerald-400/20">
+          <CheckCircle2 className="h-5 w-5 text-emerald-300 flex-shrink-0" />
           <div>
-            <p className="text-sm font-medium text-emerald-300">Analysis Complete</p>
-            <p className="text-xs text-emerald-400/70">Resume processed · {file?.name}</p>
+            <p className="text-sm font-medium text-emerald-200">Analysis complete</p>
+            <p className="text-xs text-emerald-300/70">Resume processed · {file?.name}</p>
           </div>
           <button
             onClick={() => { setResult(null); setFile(null) }}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-white/[0.05] transition-all"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            New Analysis
+            New analysis
           </button>
         </div>
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-4">
-          {/* Score card */}
           <div className="glass-card rounded-2xl p-5 flex flex-col items-center gap-2">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Resume Score</p>
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Resume score</p>
             <CircularProgress score={score} />
             <p className="text-xs text-muted-foreground">
-              {score >= 80 ? '🟢 Excellent' : score >= 60 ? '🟡 Good' : '🔴 Needs Work'}
+              {score >= 80 ? 'Excellent' : score >= 60 ? 'Looking good' : 'Needs work'}
             </p>
           </div>
 
-          {/* Skills count */}
           <div className="glass-card rounded-2xl p-5 flex flex-col items-center justify-center gap-1">
-            <Zap className="h-8 w-8 text-violet-400 mb-1" />
-            <span className="text-3xl font-bold gradient-text">{result.skills.length}</span>
-            <p className="text-xs text-muted-foreground">Skills Found</p>
+            <span className="w-11 h-11 rounded-xl bg-primary/12 border border-primary/20 flex items-center justify-center mb-1">
+              <Zap className="h-5 w-5 text-primary" />
+            </span>
+            <span className="text-4xl font-bold gradient-text font-display">{result.skills.length}</span>
+            <p className="text-xs text-muted-foreground">Skills found</p>
           </div>
 
-          {/* Roles count */}
           <div className="glass-card rounded-2xl p-5 flex flex-col items-center justify-center gap-1">
-            <Target className="h-8 w-8 text-cyan-400 mb-1" />
-            <span className="text-3xl font-bold gradient-text">{result.roles.length}</span>
-            <p className="text-xs text-muted-foreground">Matching Roles</p>
+            <span className="w-11 h-11 rounded-xl bg-accent/12 border border-accent/20 flex items-center justify-center mb-1">
+              <Target className="h-5 w-5 text-accent" />
+            </span>
+            <span className="text-4xl font-bold gradient-text font-display">{result.roles.length}</span>
+            <p className="text-xs text-muted-foreground">Matching roles</p>
           </div>
         </div>
 
-        {/* Skills section */}
+        {/* Skills */}
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Zap className="h-4 w-4 text-violet-400" />
-            <h3 className="text-sm font-semibold">Extracted Skills</h3>
+            <Zap className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Extracted skills</h3>
             <span className="ml-auto text-xs text-muted-foreground">{result.skills.length} total</span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -210,11 +211,11 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
           </div>
         </div>
 
-        {/* Roles section */}
+        {/* Roles */}
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Target className="h-4 w-4 text-cyan-400" />
-            <h3 className="text-sm font-semibold">Suggested Roles</h3>
+            <Target className="h-4 w-4 text-accent" />
+            <h3 className="text-sm font-semibold">Suggested roles</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {result.roles.map((role, idx) => (
@@ -235,17 +236,17 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
           </div>
         </div>
 
-        {/* Strengths & Weaknesses */}
+        {/* Strengths & improvements */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="glass-card rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-              <h3 className="text-sm font-semibold text-emerald-300">Strengths</h3>
+              <TrendingUp className="h-4 w-4 text-emerald-300" />
+              <h3 className="text-sm font-semibold text-emerald-200">Strengths</h3>
             </div>
             <ul className="space-y-2">
               {(result.skills.slice(0, 3)).map(s => (
                 <li key={s} className="flex items-center gap-2 text-xs text-foreground/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 flex-shrink-0" />
                   {s}
                 </li>
               ))}
@@ -256,20 +257,20 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
           </div>
           <div className="glass-card rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="h-4 w-4 text-amber-400" />
-              <h3 className="text-sm font-semibold text-amber-300">Areas to Improve</h3>
+              <AlertTriangle className="h-4 w-4 text-amber-300" />
+              <h3 className="text-sm font-semibold text-amber-200">Areas to improve</h3>
             </div>
             <ul className="space-y-2">
               <li className="flex items-center gap-2 text-xs text-foreground/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-300 flex-shrink-0" />
                 Add quantifiable achievements
               </li>
               <li className="flex items-center gap-2 text-xs text-foreground/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-300 flex-shrink-0" />
                 Include a summary section
               </li>
               <li className="flex items-center gap-2 text-xs text-foreground/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-300 flex-shrink-0" />
                 Add more relevant keywords
               </li>
             </ul>
@@ -282,17 +283,21 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
   return (
     <div className="flex flex-col items-center justify-start py-4 fade-in">
       <div className="w-full max-w-2xl">
-        {/* Header */}
+        {/* Hero */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary mb-5">
             <Sparkles className="h-3 w-3" />
-            AI-Powered Resume Analysis
+            AI-powered resume analysis
           </div>
-          <h1 className="text-2xl font-bold gradient-text mb-2">Analyze Your Resume</h1>
-          <p className="text-sm text-muted-foreground">Upload your PDF resume and let AI extract insights, skills, and matching roles in seconds</p>
+          <h1 className="text-4xl font-bold mb-3 font-display tracking-tight">
+            Let the genie read <span className="gradient-text">your resume</span>
+          </h1>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+            Drop in your PDF and get your skills, matching roles, and a quick read on where you stand — in seconds.
+          </p>
         </div>
 
-        {/* Upload card */}
+        {/* Upload zone */}
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -301,8 +306,8 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
           className={cn(
             'glass-card relative rounded-3xl p-10 text-center transition-all duration-300 cursor-pointer',
             dragActive
-              ? 'border-primary/60 bg-primary/5 shadow-[0_0_40px_oklch(0.65_0.22_270/0.2)]'
-              : 'hover:border-border/60 hover:shadow-[0_0_24px_oklch(0_0_0/0.4)]'
+              ? 'border-primary/60 bg-primary/5 shadow-[0_0_44px_oklch(0.81_0.13_82/0.22)]'
+              : 'hover:shadow-[0_0_28px_oklch(0_0_0/0.4)]'
           )}
         >
           <input
@@ -314,14 +319,14 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
 
           {file ? (
             <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
-                <FileText className="h-8 w-8 text-emerald-400" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-400/12 border border-emerald-400/25 flex items-center justify-center">
+                <FileText className="h-8 w-8 text-emerald-300" />
               </div>
               <div>
                 <p className="font-semibold text-sm text-foreground">{file.name}</p>
-                <p className="text-xs text-muted-foreground mt-1">{formatFileSize(file.size)} · PDF Document</p>
+                <p className="text-xs text-muted-foreground mt-1">{formatFileSize(file.size)} · PDF document</p>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-400/10 border border-emerald-400/20 text-xs text-emerald-300">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Ready to analyze
               </div>
@@ -338,13 +343,13 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
               </div>
               <div>
                 <p className="font-semibold text-base">
-                  {dragActive ? 'Drop your resume here' : 'Drag & drop your resume'}
+                  {dragActive ? 'Drop it right here' : 'Drag & drop your resume'}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   or <span className="text-primary hover:underline">browse files</span>
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground/60">PDF files only · Max 10MB</p>
+              <p className="text-xs text-muted-foreground/60">PDF only · up to 10MB</p>
             </div>
           )}
         </div>
@@ -352,22 +357,22 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
         {/* Error */}
         {error && (
           <div className="mt-4 flex gap-2.5 p-3.5 rounded-2xl bg-destructive/10 border border-destructive/20 fade-in">
-            <AlertCircle className="h-4.5 w-4.5 text-destructive flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
-        {/* CTA Button */}
+        {/* CTA */}
         <button
           onClick={handleUpload}
           disabled={!file || loading}
-          className="mt-5 w-full btn-gradient rounded-2xl py-3.5 px-6 text-sm font-semibold text-white flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+          className="mt-5 w-full btn-gradient rounded-2xl py-3.5 px-6 text-sm flex items-center justify-center gap-2.5 disabled:transform-none disabled:shadow-none"
         >
           <Sparkles className="h-4 w-4" />
-          Analyze Resume
+          Analyze my resume
         </button>
         <p className="text-center text-xs text-muted-foreground/50 mt-3">
-          ⏱ Analysis typically takes 10–30 seconds depending on document length
+          Usually takes 10–30 seconds, depending on length
         </p>
       </div>
     </div>

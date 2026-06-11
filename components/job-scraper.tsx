@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AlertCircle, Briefcase, ExternalLink, MapPin, Clock, Search, SlidersHorizontal, Loader2, X, Plus, Building2 } from 'lucide-react'
+import { AlertCircle, Briefcase, ExternalLink, MapPin, Search, SlidersHorizontal, Loader2, X, Plus, Building2 } from 'lucide-react'
 import { APIClient, Job, JobsRequest } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const WORK_TYPES = ['On-site', 'Hybrid', 'Remote']
 const EXP_LEVELS = ['Internship', 'Entry level', 'Associate', 'Mid-senior level']
 const TIME_FILTERS = ['Past 24 hours', 'Past week', 'Past month']
-const DEFAULT_CITIES = ['Delhi', 'Mumbai', 'Pune', 'Chandigarh', 'Bangalore', 'Hyderabad']
 
 const ROLE_ICONS: Record<string, string> = {
   'machine learning': '🤖',
@@ -54,10 +53,10 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center fade-in">
       <div className="w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-        <Search className="h-9 w-9 text-primary/40" />
+        <Search className="h-9 w-9 text-primary/45" />
       </div>
-      <h3 className="font-semibold text-base mb-2">No jobs found yet</h3>
-      <p className="text-sm text-muted-foreground max-w-xs">Configure your filters and click "Start Scraping" to discover relevant job openings</p>
+      <h3 className="font-semibold text-base mb-2 font-display">Ready when you are</h3>
+      <p className="text-sm text-muted-foreground max-w-xs">Set your filters on the left and hit “Start scraping” to surface fresh openings.</p>
     </div>
   )
 }
@@ -65,11 +64,11 @@ function EmptyState() {
 function NoResults() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center fade-in">
-      <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
-        <Briefcase className="h-7 w-7 text-amber-400/60" />
+      <div className="w-16 h-16 rounded-3xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center mb-4">
+        <Briefcase className="h-7 w-7 text-amber-300/70" />
       </div>
-      <h3 className="font-semibold text-sm mb-1">No results found</h3>
-      <p className="text-xs text-muted-foreground max-w-xs">Try broadening your filters or selecting different job roles</p>
+      <h3 className="font-semibold text-sm mb-1">Nothing matched</h3>
+      <p className="text-xs text-muted-foreground max-w-xs">Try widening your filters or picking different roles.</p>
     </div>
   )
 }
@@ -113,10 +112,9 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
   }
 
   const handleScrape = async () => {
-    if (selectedRoles.length === 0) { setError('Please select at least one role'); return }
+    if (selectedRoles.length === 0) { setError('Pick at least one role to search'); return }
     setLoading(true); setError(null); setHasScraped(true); setJobs([]); setProgress(0)
 
-    // Fake progress animation
     const interval = setInterval(() => {
       setProgress(p => Math.min(p + Math.random() * 18, 90))
     }, 400)
@@ -148,8 +146,8 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
       className={cn(
         'px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150',
         active
-          ? 'bg-primary/20 text-primary border-primary/30 shadow-[0_0_10px_oklch(0.65_0.22_270/0.2)]'
-          : 'bg-white/[0.03] text-muted-foreground border-border/40 hover:border-border hover:text-foreground hover:bg-white/5'
+          ? 'bg-primary/18 text-primary border-primary/30 shadow-[0_0_10px_oklch(0.81_0.13_82/0.18)]'
+          : 'bg-white/[0.03] text-muted-foreground border-border/40 hover:border-border hover:text-foreground hover:bg-white/[0.05]'
       )}
     >
       {label}
@@ -158,17 +156,17 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
 
   return (
     <div className="flex gap-5 h-full fade-in">
-      {/* Left: Filters panel */}
+      {/* Filters */}
       <div className="w-72 flex-shrink-0 space-y-4">
         <div className="glass-card rounded-2xl p-5 space-y-5 sticky top-0">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold">Filters</h3>
+            <SlidersHorizontal className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold font-display">Filters</h3>
           </div>
 
           {/* Roles */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Job Roles</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Job roles</label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {selectedRoles.map(role => (
                 <button
@@ -187,7 +185,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                 value={customRole}
                 onChange={e => setCustomRole(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addCustomRole()}
-                placeholder="Add role..."
+                placeholder="Add role…"
                 className="flex-1 bg-white/[0.04] border border-border/40 rounded-xl px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 focus:bg-primary/5 transition-all"
               />
               <button
@@ -201,13 +199,13 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
 
           {/* Cities */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Cities</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Cities</label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {cities.map(city => (
                 <button
                   key={city}
                   onClick={() => setCities(prev => prev.filter(c => c !== city))}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all group"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-accent/10 text-accent border border-accent/20 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all group"
                 >
                   <MapPin className="h-2.5 w-2.5" />
                   {city}
@@ -220,10 +218,10 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                 value={customCity}
                 onChange={e => setCustomCity(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addCustomCity()}
-                placeholder="Add city..."
-                className="flex-1 bg-white/[0.04] border border-border/40 rounded-xl px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 transition-all"
+                placeholder="Add city…"
+                className="flex-1 bg-white/[0.04] border border-border/40 rounded-xl px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent/40 transition-all"
               />
-              <button onClick={addCustomCity} className="px-2.5 py-1.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all">
+              <button onClick={addCustomCity} className="px-2.5 py-1.5 rounded-xl bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-all">
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -231,7 +229,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
 
           {/* Country */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Country</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Country</label>
             <input
               value={country}
               onChange={e => setCountry(e.target.value)}
@@ -239,9 +237,9 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
             />
           </div>
 
-          {/* Work Type */}
+          {/* Work type */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Work Type</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Work type</label>
             <div className="flex flex-wrap gap-1.5">
               {WORK_TYPES.map(t => (
                 <ChipButton key={t} label={t} active={selectedWorkTypes.includes(t)} onClick={() => setSelectedWorkTypes(prev => toggle(prev, t))} />
@@ -249,9 +247,9 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
             </div>
           </div>
 
-          {/* Experience Level */}
+          {/* Experience */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Experience</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Experience</label>
             <div className="flex flex-wrap gap-1.5">
               {EXP_LEVELS.map(l => (
                 <ChipButton key={l} label={l} active={selectedExpLevels.includes(l)} onClick={() => setSelectedExpLevels(prev => toggle(prev, l))} />
@@ -259,9 +257,9 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
             </div>
           </div>
 
-          {/* Time Filter */}
+          {/* Time */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Posted</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Posted</label>
             <div className="flex flex-col gap-1.5">
               {TIME_FILTERS.map(f => (
                 <ChipButton key={f} label={f} active={timeFilter === f} onClick={() => setTimeFilter(f)} />
@@ -279,29 +277,28 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
           <button
             onClick={handleScrape}
             disabled={loading || selectedRoles.length === 0}
-            className="w-full btn-gradient rounded-2xl py-3 text-sm font-semibold text-white flex items-center justify-center gap-2"
+            className="w-full btn-gradient rounded-2xl py-3 text-sm flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Scraping...
+                Scraping…
               </>
             ) : (
               <>
                 <Search className="h-4 w-4" />
-                Start Scraping
+                Start scraping
               </>
             )}
           </button>
           <p className="text-center text-[10px] text-muted-foreground/40">
-            ⏱ Scraping may take 15–60 seconds
+            Scraping can take 15–60 seconds
           </p>
         </div>
       </div>
 
-      {/* Right: Results panel */}
+      {/* Results */}
       <div className="flex-1 min-w-0">
-        {/* Results header */}
         {hasScraped && (
           <div className="mb-4 fade-in">
             {loading ? (
@@ -309,34 +306,33 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                    Scraping job listings...
+                    Searching job boards…
                   </div>
-                  <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
+                  <span className="text-xs text-muted-foreground font-mono">{Math.round(progress)}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-border/50 overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${progress}%`,
-                      background: 'linear-gradient(90deg, oklch(0.58 0.24 270), oklch(0.72 0.18 190))'
+                      background: 'linear-gradient(90deg, oklch(0.81 0.13 82), oklch(0.80 0.11 182))'
                     }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Searching across {selectedRoles.length} roles in {cities.length} cities...</p>
+                <p className="text-xs text-muted-foreground">Across {selectedRoles.length} roles in {cities.length} cities…</p>
               </div>
             ) : (
               <div className="flex items-center justify-between px-1">
                 <p className="text-sm font-semibold">
-                  <span className="gradient-text">{jobs.length}</span>
+                  <span className="gradient-text font-display text-base">{jobs.length}</span>
                   <span className="text-muted-foreground ml-1.5 font-normal">positions found</span>
                 </p>
-                <p className="text-xs text-muted-foreground">{selectedRoles.join(', ')}</p>
+                <p className="text-xs text-muted-foreground truncate max-w-[50%]">{selectedRoles.join(', ')}</p>
               </div>
             )}
           </div>
         )}
 
-        {/* Job cards */}
         {loading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {Array.from({ length: 6 }).map((_, i) => <JobCardSkeleton key={i} />)}
@@ -350,10 +346,9 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
             {jobs.map((job, idx) => (
               <div
                 key={idx}
-                className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_20px_oklch(0.65_0.22_270/0.1)] transition-all duration-200 group fade-in flex flex-col gap-3"
+                className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_22px_oklch(0.81_0.13_82/0.12)] transition-all duration-200 group fade-in flex flex-col gap-3"
               >
                 <div className="flex items-start gap-3">
-                  {/* Company logo placeholder */}
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-border/40 flex items-center justify-center flex-shrink-0 text-lg">
                     {getRoleEmoji(job.title)}
                   </div>
@@ -366,35 +361,33 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                   </div>
                 </div>
 
-                {/* Tags */}
                 <div className="flex flex-wrap gap-1.5">
                   {job.location && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-accent/10 text-accent border border-accent/20">
                       <MapPin className="h-2.5 w-2.5" />
                       {job.location}
                     </span>
                   )}
                   {selectedWorkTypes[0] && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary border border-primary/20">
                       {selectedWorkTypes[0]}
                     </span>
                   )}
                   {selectedExpLevels[0] && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-400/10 text-amber-300 border border-amber-400/20">
                       {selectedExpLevels[0]}
                     </span>
                   )}
                 </div>
 
-                {/* Apply button */}
                 {job.link && (
                   <a
                     href={job.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 hover:shadow-[0_0_12px_oklch(0.65_0.22_270/0.3)] transition-all w-fit"
+                    className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 hover:shadow-[0_0_12px_oklch(0.81_0.13_82/0.3)] transition-all w-fit"
                   >
-                    Apply Now
+                    Apply now
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
