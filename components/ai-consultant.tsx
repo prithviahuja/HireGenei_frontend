@@ -21,8 +21,8 @@ const SUGGESTED_PROMPTS = [
 
 function GenieAvatar() {
   return (
-    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_oklch(0.81_0.13_82/0.4)]">
-      <Sparkles className="h-4 w-4 text-[#241c0e]" />
+    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_oklch(0.72_0.16_162/0.4)]">
+      <Sparkles className="h-4 w-4 text-[#06281c]" />
     </div>
   )
 }
@@ -239,7 +239,7 @@ export function AIConsultant() {
       {/* Input */}
       <div className="flex-shrink-0 px-6 pb-5 pt-2">
         <div className="max-w-3xl mx-auto">
-          <div className="glass-card rounded-2xl flex items-end gap-3 p-3 focus-within:border-primary/40 focus-within:shadow-[0_0_20px_oklch(0.81_0.13_82/0.12)] transition-all">
+          <div className="glass-card rounded-2xl flex items-end gap-3 p-3 focus-within:border-primary/40 focus-within:shadow-[0_0_20px_oklch(0.72_0.16_162/0.12)] transition-all">
             <textarea
               ref={inputRef}
               value={input}

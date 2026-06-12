@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { RolesProvider } from '@/components/roles-provider'
+import { SiteHeader } from '@/components/site-header'
+import { SiteFooter } from '@/components/site-footer'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -34,7 +37,13 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased">
         <div className="aurora" aria-hidden="true" />
-        <div className="relative z-10">{children}</div>
+        <RolesProvider>
+          <div className="relative z-10 flex flex-col min-h-screen">
+            <SiteHeader />
+            <main className="flex-1 flex flex-col">{children}</main>
+            <SiteFooter />
+          </div>
+        </RolesProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

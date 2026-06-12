@@ -44,7 +44,7 @@ function CircularProgress({ score }: { score: number }) {
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
 
-  const color = score >= 80 ? 'oklch(0.78 0.13 160)' : score >= 60 ? 'oklch(0.81 0.13 82)' : 'oklch(0.65 0.18 24)'
+  const color = score >= 80 ? 'oklch(0.72 0.16 162)' : score >= 60 ? 'oklch(0.85 0.18 124)' : 'oklch(0.65 0.18 24)'
 
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
@@ -306,7 +306,7 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
           className={cn(
             'glass-card relative rounded-3xl p-10 text-center transition-all duration-300 cursor-pointer',
             dragActive
-              ? 'border-primary/60 bg-primary/5 shadow-[0_0_44px_oklch(0.81_0.13_82/0.22)]'
+              ? 'border-primary/60 bg-primary/5 shadow-[0_0_44px_oklch(0.72_0.16_162/0.22)]'
               : 'hover:shadow-[0_0_28px_oklch(0_0_0/0.4)]'
           )}
         >

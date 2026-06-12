@@ -146,7 +146,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
       className={cn(
         'px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150',
         active
-          ? 'bg-primary/18 text-primary border-primary/30 shadow-[0_0_10px_oklch(0.81_0.13_82/0.18)]'
+          ? 'bg-primary/18 text-primary border-primary/30 shadow-[0_0_10px_oklch(0.72_0.16_162/0.18)]'
           : 'bg-white/[0.03] text-muted-foreground border-border/40 hover:border-border hover:text-foreground hover:bg-white/[0.05]'
       )}
     >
@@ -158,7 +158,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
     <div className="flex gap-5 h-full fade-in">
       {/* Filters */}
       <div className="w-72 flex-shrink-0 space-y-4">
-        <div className="glass-card rounded-2xl p-5 space-y-5 sticky top-0">
+        <div className="glass-card rounded-2xl p-5 space-y-5 sticky top-20">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold font-display">Filters</h3>
@@ -315,7 +315,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${progress}%`,
-                      background: 'linear-gradient(90deg, oklch(0.81 0.13 82), oklch(0.80 0.11 182))'
+                      background: 'linear-gradient(90deg, oklch(0.72 0.16 162), oklch(0.85 0.18 124))'
                     }}
                   />
                 </div>
@@ -346,7 +346,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
             {jobs.map((job, idx) => (
               <div
                 key={idx}
-                className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_22px_oklch(0.81_0.13_82/0.12)] transition-all duration-200 group fade-in flex flex-col gap-3"
+                className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_22px_oklch(0.72_0.16_162/0.12)] transition-all duration-200 group fade-in flex flex-col gap-3"
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-border/40 flex items-center justify-center flex-shrink-0 text-lg">
@@ -385,7 +385,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                     href={job.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 hover:shadow-[0_0_12px_oklch(0.81_0.13_82/0.3)] transition-all w-fit"
+                    className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 hover:shadow-[0_0_12px_oklch(0.72_0.16_162/0.3)] transition-all w-fit"
                   >
                     Apply now
                     <ExternalLink className="h-3 w-3" />
