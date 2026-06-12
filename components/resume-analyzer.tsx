@@ -1,9 +1,20 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { AlertCircle, CheckCircle2, Upload, FileText, Sparkles, RotateCcw, Zap, Target, TrendingUp, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { AlertCircle, CheckCircle2, Upload, FileText, Sparkles, RotateCcw, Zap, Target, TrendingUp, AlertTriangle, ArrowRight, Briefcase } from 'lucide-react'
 import { APIClient, ResumeResponse } from '@/lib/api'
 import { cn } from '@/lib/utils'
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10MB
+
+function validateFile(f: File): string | null {
+  const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
+  if (!isPdf) return 'Please upload a PDF file.'
+  if (f.size > MAX_FILE_BYTES) return 'File is too large. Maximum size is 10MB.'
+  if (f.size === 0) return 'That file appears to be empty.'
+  return null
+}
 
 interface ResumeAnalyzerProps {
   onAnalyzed?: (data: ResumeResponse) => void
@@ -107,12 +118,20 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
     e.stopPropagation()
     setDragActive(false)
     const f = e.dataTransfer.files?.[0]
-    if (f) { setFile(f); setError(null) }
+    if (f) {
+      const err = validateFile(f)
+      if (err) { setError(err); return }
+      setFile(f); setError(null)
+    }
   }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
-    if (f) { setFile(f); setError(null) }
+    if (f) {
+      const err = validateFile(f)
+      if (err) { setError(err); setFile(null); return }
+      setFile(f); setError(null)
+    }
   }
 
   const handleUpload = async () => {
@@ -136,8 +155,8 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  // Backend may not return a score; default for display only
-  const score = (result as any)?.score ?? 78
+  // Real readiness score from the backend (falls back gracefully if absent).
+  const score = typeof result?.score === 'number' ? result.score : 0
 
   if (loading) {
     return <SkeletonResults />
@@ -276,6 +295,19 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
             </ul>
           </div>
         </div>
+
+        {/* Continue to Job Discovery */}
+        <Link
+          href="/jobs"
+          className="btn-gradient rounded-2xl py-3.5 px-6 text-sm flex items-center justify-center gap-2.5 w-full"
+        >
+          <Briefcase className="h-4 w-4" />
+          Find matching jobs
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+        <p className="text-center text-xs text-muted-foreground/50 -mt-2">
+          Your {result.roles.length} matched roles will be pre-loaded into Job Discovery
+        </p>
       </div>
     )
   }

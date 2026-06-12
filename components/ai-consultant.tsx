@@ -113,7 +113,7 @@ function MessageBubble({ message }: { message: Message; isLast: boolean }) {
   )
 }
 
-export function AIConsultant() {
+export function AIConsultant({ sessionId }: { sessionId?: string } = {}) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
@@ -141,7 +141,7 @@ export function AIConsultant() {
     setLoading(true)
 
     try {
-      const response = await APIClient.chat(userMessage)
+      const response = await APIClient.chat(userMessage, sessionId)
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: response.reply }])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get response')

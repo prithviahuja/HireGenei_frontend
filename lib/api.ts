@@ -7,6 +7,8 @@ const API_BASE = `${DEFAULT_API_URL}/api`
 export interface ResumeResponse {
   skills: string[]
   roles: string[]
+  score?: number
+  session_id?: string
 }
 
 export interface JobsRequest {
@@ -32,10 +34,19 @@ export interface JobsResponse {
 
 export interface ChatRequest {
   message: string
+  session_id?: string
 }
 
 export interface ChatResponse {
   reply: string
+}
+
+export interface JobStreamHandlers {
+  onJob: (job: Job) => void
+  onDone: (total: number) => void
+  onWarning?: (message: string) => void
+  onError: (message: string) => void
+  signal?: AbortSignal
 }
 
 export class APIClient {
@@ -49,7 +60,14 @@ export class APIClient {
     })
 
     if (!response.ok) {
-      throw new Error('Failed to upload resume')
+      let detail = 'Failed to upload resume'
+      try {
+        const e = await response.json()
+        if (e?.detail) detail = e.detail
+      } catch {
+        /* ignore */
+      }
+      throw new Error(detail)
     }
 
     return response.json()
@@ -58,9 +76,7 @@ export class APIClient {
   static async scrapeJobs(request: JobsRequest): Promise<JobsResponse> {
     const response = await fetch(`${API_BASE}/jobs/scrape`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     })
 
@@ -71,13 +87,85 @@ export class APIClient {
     return response.json()
   }
 
-  static async chat(message: string): Promise<ChatResponse> {
+  // Streaming scrape: jobs are delivered the moment they're found (NDJSON).
+  // Falls back to the non-streaming endpoint if streaming isn't available.
+  static async scrapeJobsStream(request: JobsRequest, handlers: JobStreamHandlers): Promise<void> {
+    const fallback = async () => {
+      const data = await this.scrapeJobs(request)
+      data.jobs.forEach((j) => handlers.onJob(j))
+      handlers.onDone(data.jobs.length)
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/jobs/scrape/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: handlers.signal,
+      })
+
+      if (!response.ok || !response.body) {
+        await fallback()
+        return
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      const handleLine = (line: string) => {
+        const trimmed = line.trim()
+        if (!trimmed) return
+        let msg: any
+        try {
+          msg = JSON.parse(trimmed)
+        } catch {
+          return
+        }
+        if (msg.type === 'job') handlers.onJob(msg.job)
+        else if (msg.type === 'warning') handlers.onWarning?.(msg.detail)
+        else if (msg.type === 'done') handlers.onDone(msg.total)
+        else if (msg.type === 'error') handlers.onError(msg.detail)
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let nl: number
+        while ((nl = buffer.indexOf('\n')) >= 0) {
+          handleLine(buffer.slice(0, nl))
+          buffer = buffer.slice(nl + 1)
+        }
+      }
+      if (buffer.trim()) handleLine(buffer)
+    } catch (err) {
+      if ((err as any)?.name === 'AbortError') return
+      // Network/streaming issue — try the non-streaming endpoint before erroring.
+      try {
+        await fallback()
+      } catch (e) {
+        handlers.onError(e instanceof Error ? e.message : 'Failed to scrape jobs')
+      }
+    }
+  }
+
+  static async getResumeStatus(sessionId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE}/resume/status/${sessionId}`)
+      if (!response.ok) return false
+      const data = await response.json()
+      return !!data.ready
+    } catch {
+      return false
+    }
+  }
+
+  static async chat(message: string, sessionId?: string): Promise<ChatResponse> {
     const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, session_id: sessionId }),
     })
 
     if (!response.ok) {

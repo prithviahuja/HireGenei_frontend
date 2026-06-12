@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { AlertCircle, Briefcase, ExternalLink, MapPin, Search, SlidersHorizontal, Loader2, X, Plus, Building2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import { AlertCircle, Briefcase, ExternalLink, MapPin, Search, SlidersHorizontal, Loader2, X, Plus, Building2, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { APIClient, Job, JobsRequest } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -89,10 +90,15 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
   const [loading, setLoading] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [hasScraped, setHasScraped] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const [finished, setFinished] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => { setSelectedRoles(defaultRoles) }, [defaultRoles])
+
+  // Cancel any in-flight stream when leaving the page
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const toggle = <T extends string>(arr: T[], item: T): T[] =>
     arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item]
@@ -113,31 +119,30 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
 
   const handleScrape = async () => {
     if (selectedRoles.length === 0) { setError('Pick at least one role to search'); return }
-    setLoading(true); setError(null); setHasScraped(true); setJobs([]); setProgress(0)
 
-    const interval = setInterval(() => {
-      setProgress(p => Math.min(p + Math.random() * 18, 90))
-    }, 400)
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
 
-    try {
-      const request: JobsRequest = {
-        roles: selectedRoles,
-        cities: cities.join(','),
-        country,
-        work_types: selectedWorkTypes,
-        exp_levels: selectedExpLevels,
-        time_filter: timeFilter,
-      }
-      const response = await APIClient.scrapeJobs(request)
-      setJobs(response.jobs)
-      setProgress(100)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to scrape jobs')
-      setHasScraped(false)
-    } finally {
-      clearInterval(interval)
-      setLoading(false)
+    setLoading(true); setError(null); setNotice(null); setHasScraped(true); setFinished(false); setJobs([])
+
+    const request: JobsRequest = {
+      roles: selectedRoles,
+      cities: cities.join(','),
+      country,
+      work_types: selectedWorkTypes,
+      exp_levels: selectedExpLevels,
+      time_filter: timeFilter,
     }
+
+    await APIClient.scrapeJobsStream(request, {
+      signal: controller.signal,
+      // Each job is appended the instant it arrives — results show up live.
+      onJob: (job) => setJobs((prev) => [...prev, job]),
+      onWarning: (msg) => setNotice(msg),
+      onError: (msg) => { setError(msg); setLoading(false) },
+      onDone: () => { setLoading(false); setFinished(true) },
+    })
   }
 
   const ChipButton = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
@@ -300,7 +305,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
       {/* Results */}
       <div className="flex-1 min-w-0">
         {hasScraped && (
-          <div className="mb-4 fade-in">
+          <div className="mb-4 fade-in space-y-3">
             {loading ? (
               <div className="glass-card rounded-2xl p-4 space-y-2">
                 <div className="flex items-center justify-between mb-1">
@@ -308,18 +313,25 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                     <Loader2 className="h-4 w-4 text-primary animate-spin" />
                     Searching job boards…
                   </div>
-                  <span className="text-xs text-muted-foreground font-mono">{Math.round(progress)}%</span>
+                  <span className="text-xs font-medium">
+                    <span className="gradient-text font-display">{jobs.length}</span>
+                    <span className="text-muted-foreground ml-1">found so far</span>
+                  </span>
                 </div>
-                <div className="h-1.5 rounded-full bg-border/50 overflow-hidden">
+                {/* Indeterminate live bar — results stream in as they're found */}
+                <div className="h-1.5 rounded-full bg-border/50 overflow-hidden relative">
                   <div
-                    className="h-full rounded-full transition-all duration-500"
+                    className="h-full w-1/3 rounded-full absolute"
                     style={{
-                      width: `${progress}%`,
-                      background: 'linear-gradient(90deg, oklch(0.72 0.16 162), oklch(0.85 0.18 124))'
+                      background: 'linear-gradient(90deg, oklch(0.72 0.16 162), oklch(0.85 0.18 124))',
+                      animation: 'jobsweep 1.3s ease-in-out infinite',
                     }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Across {selectedRoles.length} roles in {cities.length} cities…</p>
+                <p className="text-xs text-muted-foreground">
+                  Live results across {selectedRoles.length} {selectedRoles.length === 1 ? 'role' : 'roles'} in {cities.length} {cities.length === 1 ? 'city' : 'cities'} — they appear below as we find them.
+                </p>
+                <style>{`@keyframes jobsweep{0%{left:-35%}100%{left:100%}}`}</style>
               </div>
             ) : (
               <div className="flex items-center justify-between px-1">
@@ -330,22 +342,30 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                 <p className="text-xs text-muted-foreground truncate max-w-[50%]">{selectedRoles.join(', ')}</p>
               </div>
             )}
+
+            {notice && (
+              <div className="flex gap-2 p-3 rounded-xl bg-amber-400/10 border border-amber-400/20">
+                <AlertCircle className="h-4 w-4 text-amber-300 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-200">{notice}</p>
+              </div>
+            )}
           </div>
         )}
 
-        {loading ? (
+        {!hasScraped ? (
+          <EmptyState />
+        ) : jobs.length === 0 && loading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {Array.from({ length: 6 }).map((_, i) => <JobCardSkeleton key={i} />)}
           </div>
-        ) : !hasScraped ? (
-          <EmptyState />
         ) : jobs.length === 0 ? (
           <NoResults />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {jobs.map((job, idx) => (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {jobs.map((job, idx) => (
               <div
-                key={idx}
+                key={job.link || idx}
                 className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_22px_oklch(0.72_0.16_162/0.12)] transition-all duration-200 group fade-in flex flex-col gap-3"
               >
                 <div className="flex items-start gap-3">
@@ -392,8 +412,32 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                   </a>
                 )}
               </div>
-            ))}
-          </div>
+              ))}
+              {/* keep streaming feedback inline while more arrive */}
+              {loading && Array.from({ length: 2 }).map((_, i) => <JobCardSkeleton key={`s${i}`} />)}
+            </div>
+
+            {/* Continue to the AI consultant once scraping completes */}
+            {finished && jobs.length > 0 && (
+              <div className="mt-6 glass-card rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-4 fade-in">
+                <span className="flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-400/12 border border-emerald-400/20 flex-shrink-0">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-300" />
+                </span>
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="text-sm font-semibold">Found {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'} for you</p>
+                  <p className="text-xs text-muted-foreground">Not sure which to apply for? Ask the AI consultant for tailored advice.</p>
+                </div>
+                <Link
+                  href="/consultant"
+                  className="btn-gradient rounded-xl px-5 py-2.5 text-sm flex items-center gap-2 flex-shrink-0"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Talk to the consultant
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

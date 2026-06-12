@@ -5,7 +5,7 @@ import { useRoles } from '@/components/roles-provider'
 import { FileText } from 'lucide-react'
 
 export default function ResumePage() {
-  const { setRoles } = useRoles()
+  const { setRoles, setSessionId } = useRoles()
 
   return (
     <div className="container-site py-14">
@@ -21,7 +21,12 @@ export default function ResumePage() {
       </div>
 
       <div className="mt-8">
-        <ResumeAnalyzer onAnalyzed={(data) => setRoles(data.roles)} />
+        <ResumeAnalyzer
+          onAnalyzed={(data) => {
+            setRoles(data.roles)
+            if (data.session_id) setSessionId(data.session_id)
+          }}
+        />
       </div>
     </div>
   )
