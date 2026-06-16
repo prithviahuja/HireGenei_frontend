@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
   X, ExternalLink, Building2, MapPin, Loader2, Mail, Phone, Copy, Check,
@@ -71,6 +72,7 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
   const [email, setEmail] = useState<EmailDraft | null>(null)
   const [stage, setStage] = useState<'scoring' | 'contacts' | 'drafting' | 'done'>('scoring')
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   // Editable draft fields
   const [subject, setSubject] = useState('')
@@ -105,6 +107,9 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
 
   useEffect(() => { runMatch() }, [runMatch])
 
+  // Portal target is only available on the client.
+  useEffect(() => { setMounted(true) }, [])
+
   // Esc to close + lock background scroll
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -121,8 +126,14 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
   const mailtoHref = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+  if (!mounted) return null
+
+  // Portal to <body> so the modal's fixed positioning is relative to the
+  // viewport — NOT to an ancestor that has a lingering CSS transform (the
+  // `fade-in` animation leaves `transform: translateY(0)`, which would
+  // otherwise trap this overlay inside the content column).
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 overflow-y-auto">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm fade-in" onClick={onClose} />
 
@@ -347,6 +358,7 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
