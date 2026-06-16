@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { AlertCircle, CheckCircle2, Upload, FileText, Sparkles, RotateCcw, Zap, Target, TrendingUp, AlertTriangle, ArrowRight, Briefcase } from 'lucide-react'
 import { APIClient, ResumeResponse } from '@/lib/api'
+import { useRoles } from '@/components/roles-provider'
 import { cn } from '@/lib/utils'
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10MB
@@ -103,7 +104,8 @@ function SkeletonResults() {
 export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<ResumeResponse | null>(null)
+  // Result lives in the shared provider so it survives page navigation.
+  const { resume: result, setResume } = useRoles()
   const [error, setError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
 
@@ -140,7 +142,7 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
     setError(null)
     try {
       const data = await APIClient.uploadResume(file)
-      setResult(data)
+      setResume({ ...data, fileName: file.name })
       onAnalyzed?.(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze resume')
@@ -170,10 +172,10 @@ export function ResumeAnalyzer({ onAnalyzed }: ResumeAnalyzerProps) {
           <CheckCircle2 className="h-5 w-5 text-emerald-300 flex-shrink-0" />
           <div>
             <p className="text-sm font-medium text-emerald-200">Analysis complete</p>
-            <p className="text-xs text-emerald-300/70">Resume processed · {file?.name}</p>
+            <p className="text-xs text-emerald-300/70">Resume processed · {result.fileName ?? file?.name}</p>
           </div>
           <button
-            onClick={() => { setResult(null); setFile(null) }}
+            onClick={() => { setResume(null); setFile(null) }}
             className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-white/[0.05] transition-all"
           >
             <RotateCcw className="h-3.5 w-3.5" />

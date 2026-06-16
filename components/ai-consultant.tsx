@@ -3,13 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Trash2, AlertCircle, User, Copy, Check, Sparkles } from 'lucide-react'
 import { APIClient } from '@/lib/api'
+import { useRoles, type ChatMessage } from '@/components/roles-provider'
 import { cn } from '@/lib/utils'
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-  id: string
-}
+type Message = ChatMessage
 
 const SUGGESTED_PROMPTS = [
   '✨ What skills should I learn for AI roles?',
@@ -114,13 +111,8 @@ function MessageBubble({ message }: { message: Message; isLast: boolean }) {
 }
 
 export function AIConsultant({ sessionId }: { sessionId?: string } = {}) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '0',
-      role: 'assistant',
-      content: "Hi — I'm your HireGenei career consultant ✨\n\nI can help you with:\n- **Career advice** and role recommendations\n- **Resume feedback** and improvement tips\n- **Skill gap analysis** for your target roles\n- **Salary negotiation** strategies\n\nWhat would you like to figure out today?",
-    },
-  ])
+  // Chat history lives in the shared provider so it survives page navigation.
+  const { chatMessages: messages, setChatMessages: setMessages } = useRoles()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

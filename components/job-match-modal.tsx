@@ -110,18 +110,26 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
   // Portal target is only available on the client.
   useEffect(() => { setMounted(true) }, [])
 
-  // Esc to close + lock background scroll
+  // Esc to close (depends on onClose).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  // Lock background scroll + abort the in-flight request ONLY on real unmount.
+  // Kept OUT of the [onClose] effect on purpose: the background job scrape can
+  // still be streaming, which re-renders the parent and changes onClose's
+  // identity — if the abort lived here it would kill our match request
+  // mid-flight (e.g. during email generation), leaving the modal stuck.
+  useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
       abortRef.current?.abort()
     }
-  }, [onClose])
+  }, [])
 
   const mailtoHref = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { AlertCircle, Briefcase, ExternalLink, MapPin, Search, SlidersHorizontal, Loader2, X, Plus, Building2, MessageSquare, ArrowRight, CheckCircle2, Mail, Target } from 'lucide-react'
 import { APIClient, Job, JobsRequest } from '@/lib/api'
@@ -90,14 +90,16 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
   const [selectedExpLevels, setSelectedExpLevels] = useState<string[]>(['Entry level'])
   const [timeFilter, setTimeFilter] = useState('Past week')
   const [loading, setLoading] = useState(false)
-  const [jobs, setJobs] = useState<Job[]>([])
+  // Jobs live in the shared provider so they survive page navigation.
+  const { sessionId, jobs, setJobs } = useRoles()
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [hasScraped, setHasScraped] = useState(false)
-  const [finished, setFinished] = useState(false)
+  const [hasScraped, setHasScraped] = useState(jobs.length > 0)
+  const [finished, setFinished] = useState(jobs.length > 0)
   const [activeJob, setActiveJob] = useState<Job | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const { sessionId } = useRoles()
+  // Stable so the modal's effects don't churn when the background scrape re-renders us.
+  const closeModal = useCallback(() => setActiveJob(null), [])
 
   useEffect(() => { setSelectedRoles(defaultRoles) }, [defaultRoles])
 
@@ -449,7 +451,7 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
       </div>
 
       {activeJob && (
-        <JobMatchModal job={activeJob} sessionId={sessionId} onClose={() => setActiveJob(null)} />
+        <JobMatchModal job={activeJob} sessionId={sessionId} onClose={closeModal} />
       )}
     </div>
   )
