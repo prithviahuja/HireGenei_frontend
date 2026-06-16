@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { AlertCircle, Briefcase, ExternalLink, MapPin, Search, SlidersHorizontal, Loader2, X, Plus, Building2, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, Briefcase, ExternalLink, MapPin, Search, SlidersHorizontal, Loader2, X, Plus, Building2, MessageSquare, ArrowRight, CheckCircle2, Mail, Target } from 'lucide-react'
 import { APIClient, Job, JobsRequest } from '@/lib/api'
+import { useRoles } from '@/components/roles-provider'
+import { JobMatchModal } from '@/components/job-match-modal'
 import { cn } from '@/lib/utils'
 
 const WORK_TYPES = ['On-site', 'Hybrid', 'Remote']
@@ -93,7 +95,9 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
   const [notice, setNotice] = useState<string | null>(null)
   const [hasScraped, setHasScraped] = useState(false)
   const [finished, setFinished] = useState(false)
+  const [activeJob, setActiveJob] = useState<Job | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const { sessionId } = useRoles()
 
   useEffect(() => { setSelectedRoles(defaultRoles) }, [defaultRoles])
 
@@ -366,7 +370,11 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
               {jobs.map((job, idx) => (
               <div
                 key={job.link || idx}
-                className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_22px_oklch(0.72_0.16_162/0.12)] transition-all duration-200 group fade-in flex flex-col gap-3"
+                onClick={() => setActiveJob(job)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveJob(job) } }}
+                className="glass-card rounded-2xl p-5 hover:border-primary/25 hover:shadow-[0_0_22px_oklch(0.72_0.16_162/0.12)] transition-all duration-200 group fade-in flex flex-col gap-3 cursor-pointer focus:outline-none focus:border-primary/40"
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-border/40 flex items-center justify-center flex-shrink-0 text-lg">
@@ -400,17 +408,16 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
                   )}
                 </div>
 
-                {job.link && (
-                  <a
-                    href={job.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 hover:shadow-[0_0_12px_oklch(0.72_0.16_162/0.3)] transition-all w-fit"
-                  >
-                    Apply now
+                <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-primary/15 text-primary border border-primary/20 group-hover:bg-primary/25 group-hover:shadow-[0_0_12px_oklch(0.72_0.16_162/0.3)] transition-all">
+                    <Target className="h-3 w-3" />
+                    Match &amp; email
+                  </span>
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                    <Mail className="h-3 w-3" />
                     <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
+                  </span>
+                </div>
               </div>
               ))}
               {/* keep streaming feedback inline while more arrive */}
@@ -440,6 +447,10 @@ export function JobScraper({ defaultRoles = [] }: JobScraperProps) {
           </>
         )}
       </div>
+
+      {activeJob && (
+        <JobMatchModal job={activeJob} sessionId={sessionId} onClose={() => setActiveJob(null)} />
+      )}
     </div>
   )
 }
