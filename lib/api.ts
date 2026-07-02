@@ -9,6 +9,27 @@ export interface ResumeResponse {
   roles: string[]
   score?: number
   session_id?: string
+  // Per-dimension 0-100 sub-scores behind the overall score.
+  breakdown?: Record<string, number>
+  // Resume-specific improvement tips.
+  suggestions?: string[]
+  // What's already working in the resume.
+  strengths?: string[]
+}
+
+export interface BreakdownIssue {
+  excerpt: string
+  problem: string
+  fix: string
+}
+
+export interface BreakdownDetail {
+  metric: string
+  score: number
+  verdict: 'low' | 'medium' | 'high'
+  summary: string
+  issues: BreakdownIssue[]
+  tips: string[]
 }
 
 export interface JobsRequest {
@@ -18,6 +39,8 @@ export interface JobsRequest {
   work_types: string[]
   exp_levels: string[]
   time_filter: string
+  // Which engines to run. Omit/undefined => all available. Values: 'linkedin', 'jsearch'.
+  sources?: string[]
 }
 
 export interface Job {
@@ -25,6 +48,8 @@ export interface Job {
   company: string
   location: string
   link: string
+  // Which board this listing came from (e.g. 'LinkedIn', 'Naukri', 'Indeed').
+  source?: string
 }
 
 export interface JobsResponse {
@@ -55,6 +80,8 @@ export interface MatchResult {
   missing_skills: string[]
   summary: string
   jd_skill_count: number
+  // 'good fit' | 'under-qualified' | 'over-qualified' | 'unknown'
+  seniority_fit?: string
 }
 
 export interface ContactInfo {
@@ -77,6 +104,9 @@ export interface JobMatchRequest {
   company: string
   location?: string
   link: string
+  // Optional user-supplied base email. When present, the backend personalizes
+  // it for this job instead of writing one from scratch.
+  email_template?: string
 }
 
 export interface JobMatchResult {
@@ -118,6 +148,41 @@ export class APIClient {
       throw new Error(detail)
     }
 
+    return response.json()
+  }
+
+  // Persist user-corrected skills/roles back to the session so the match score
+  // and cold-email generator use the edited values (not just the displayed chips).
+  static async updateResumeProfile(
+    sessionId: string,
+    skills: string[],
+    roles?: string[],
+  ): Promise<ResumeResponse> {
+    const response = await fetch(`${API_BASE}/resume/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, skills, roles }),
+    })
+    if (!response.ok) throw new Error('Failed to update resume profile')
+    return response.json()
+  }
+
+  // Drill into one score-breakdown dimension: why it scored that way, which
+  // resume lines hurt it, and how to rewrite them.
+  static async getBreakdownDetail(sessionId: string, metric: string): Promise<BreakdownDetail> {
+    const response = await fetch(`${API_BASE}/resume/breakdown/detail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, metric }),
+    })
+    if (!response.ok) {
+      let detail = 'Failed to load the breakdown detail'
+      try {
+        const e = await response.json()
+        if (e?.detail) detail = e.detail
+      } catch { /* ignore */ }
+      throw new Error(detail)
+    }
     return response.json()
   }
 
@@ -290,6 +355,23 @@ export class APIClient {
       return !!data.ready
     } catch {
       return false
+    }
+  }
+
+  // Confirm whether the backend still holds this session. Returns:
+  //   { exists: true }  -> session is live, cached analysis is valid
+  //   { exists: false } -> backend reachable but session is gone (e.g. it
+  //                        restarted) -> the cached analysis should be cleared
+  //   null              -> backend unreachable; DON'T wipe (it may be starting up)
+  static async getResumeSession(sessionId: string): Promise<{ ready: boolean; exists: boolean } | null> {
+    if (!sessionId) return { ready: false, exists: false }
+    try {
+      const response = await fetch(`${API_BASE}/resume/status/${sessionId}`)
+      if (!response.ok) return null
+      const data = await response.json()
+      return { ready: !!data.ready, exists: !!data.exists }
+    } catch {
+      return null
     }
   }
 

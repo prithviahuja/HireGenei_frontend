@@ -14,7 +14,7 @@ export default function ResumePage() {
           <FileText className="h-3.5 w-3.5" />
           Resume Analyzer
         </span>
-        <h1 className="font-display text-4xl font-bold tracking-tight">Read your resume</h1>
+        <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-[-0.035em]">Read <span className="gradient-text">your resume</span></h1>
         <p className="mt-3 text-muted-foreground">
           We’ll pull out your skills and matching roles — then carry them into Job Discovery automatically.
         </p>

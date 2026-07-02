@@ -36,8 +36,8 @@ export function SiteFooter() {
           {/* Brand */}
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent shadow-[0_0_14px_oklch(0.72_0.16_162/0.4)]">
-                <Sparkles className="h-4 w-4 text-[#06281c]" />
+              <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent shadow-[0_0_16px_oklch(0.62_0.2_264/0.45)]">
+                <Sparkles className="h-4 w-4 text-white" />
               </span>
               <span className="font-display font-bold text-lg gradient-text">HireGenei</span>
             </div>

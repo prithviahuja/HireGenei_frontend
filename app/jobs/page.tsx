@@ -14,7 +14,7 @@ export default function JobsPage() {
           <Briefcase className="h-3.5 w-3.5" />
           Job Discovery
         </span>
-        <h1 className="font-display text-4xl font-bold tracking-tight">Discover matching jobs</h1>
+        <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-[-0.035em]">Discover <span className="gradient-text">matching jobs</span></h1>
         <p className="mt-3 text-muted-foreground">
           {roles.length > 0
             ? 'Your roles from the resume analyzer are pre-loaded. Tune the filters and start scraping.'

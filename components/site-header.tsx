@@ -22,15 +22,15 @@ export function SiteHeader() {
   return (
     <header
       className="sticky top-0 z-50 border-b border-border/40"
-      style={{ background: 'oklch(0.145 0.006 64 / 0.72)', backdropFilter: 'blur(14px)' }}
+      style={{ background: 'oklch(0.155 0.004 264 / 0.72)', backdropFilter: 'blur(14px)' }}
     >
       <div className="container-site flex items-center justify-between h-16">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
-          <span className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent shadow-[0_0_16px_oklch(0.72_0.16_162/0.45)]">
-            <Sparkles className="h-4 w-4 text-[#06281c]" />
+          <span className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-accent shadow-[0_0_18px_oklch(0.62_0.2_264/0.5)]">
+            <Sparkles className="h-4 w-4 text-white" />
           </span>
-          <span className="font-display font-bold text-lg gradient-text leading-none">HireGenei</span>
+          <span className="font-display font-bold text-lg gradient-text tracking-tight leading-none">HireGenei</span>
         </Link>
 
         {/* Desktop nav */}

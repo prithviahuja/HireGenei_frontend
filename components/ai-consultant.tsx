@@ -9,17 +9,17 @@ import { cn } from '@/lib/utils'
 type Message = ChatMessage
 
 const SUGGESTED_PROMPTS = [
-  '✨ What skills should I learn for AI roles?',
-  '📊 Review my resume gaps',
-  '💰 How do I negotiate my salary?',
-  '🚀 Switching career to data science?',
-  '🎯 Best remote tech jobs in India?',
+  'What skills should I learn for AI roles?',
+  'Review my resume gaps',
+  'How do I negotiate my salary?',
+  'Switching career to data science?',
+  'Best remote tech jobs in India?',
 ]
 
 function GenieAvatar() {
   return (
-    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_oklch(0.72_0.16_162/0.4)]">
-      <Sparkles className="h-4 w-4 text-[#06281c]" />
+    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 shadow-[0_0_14px_oklch(0.62_0.2_264/0.45)]">
+      <Sparkles className="h-4 w-4 text-white" />
     </div>
   )
 }
@@ -101,7 +101,7 @@ function MessageBubble({ message }: { message: Message; isLast: boolean }) {
             onClick={copyText}
             className="absolute -bottom-5 left-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
+            {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
             {copied ? 'Copied' : 'Copy'}
           </button>
         )}
@@ -154,7 +154,7 @@ export function AIConsultant({ sessionId }: { sessionId?: string } = {}) {
     setMessages([{
       id: '0',
       role: 'assistant',
-      content: "Fresh start ✨ What would you like to talk about?",
+      content: "Fresh start. What would you like to talk about?",
     }])
     setError(null)
   }
@@ -166,14 +166,14 @@ export function AIConsultant({ sessionId }: { sessionId?: string } = {}) {
       {/* Chat header */}
       <div
         className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-border/40"
-        style={{ background: 'oklch(0.145 0.006 64 / 0.75)', backdropFilter: 'blur(12px)' }}
+        style={{ background: 'oklch(0.155 0.004 264 / 0.75)', backdropFilter: 'blur(12px)' }}
       >
         <div className="flex items-center gap-2.5">
           <GenieAvatar />
           <div>
             <p className="text-sm font-semibold leading-none font-display">HireGenei AI</p>
-            <p className="text-[10px] text-emerald-300 mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 inline-block" />
+            <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
               Online
             </p>
           </div>

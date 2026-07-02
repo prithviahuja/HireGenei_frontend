@@ -14,7 +14,7 @@ export default function ConsultantPage() {
           <MessageSquare className="h-3.5 w-3.5" />
           AI Consultant
         </span>
-        <h1 className="font-display text-4xl font-bold tracking-tight">Talk to your career genie</h1>
+        <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-[-0.035em]">Talk to your <span className="gradient-text">career genie</span></h1>
         <p className="mt-3 text-muted-foreground">
           {sessionId
             ? 'Your resume is loaded — ask about skill gaps, role fit, or how to stand out.'

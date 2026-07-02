@@ -8,7 +8,14 @@ import {
   Sparkles, Target, AlertCircle, Send, FileText, ShieldQuestion,
 } from 'lucide-react'
 import { APIClient, Job, MatchResult, ContactInfo, EmailDraft } from '@/lib/api'
+import { useRoles } from '@/components/roles-provider'
 import { cn } from '@/lib/utils'
+
+// Backend phrases that mean "this session no longer has a usable resume" —
+// i.e. the stored session_id is stale (e.g. the backend restarted and wiped its
+// in-memory sessions). When we see one of these we clear the cached resume so
+// the whole app stops pretending a resume is loaded.
+const STALE_SESSION_RE = /upload your resume first|re-?upload your resume|session not found/i
 
 interface JobMatchModalProps {
   job: Job
@@ -20,11 +27,11 @@ function ScoreRing({ score }: { score: number }) {
   const radius = 34
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
-  const color = score >= 75 ? 'oklch(0.72 0.16 162)' : score >= 50 ? 'oklch(0.85 0.18 124)' : 'oklch(0.65 0.18 24)'
+  const color = score >= 75 ? 'oklch(0.62 0.16 256)' : score >= 50 ? 'oklch(0.66 0.06 256)' : 'oklch(0.6 0.01 264)'
   return (
     <div className="relative flex items-center justify-center w-24 h-24 flex-shrink-0">
       <svg className="absolute" width="96" height="96" viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r={radius} stroke="oklch(0.26 0.012 70)" strokeWidth="7" fill="none" />
+        <circle cx="48" cy="48" r={radius} stroke="oklch(0.28 0.005 264)" strokeWidth="7" fill="none" />
         <circle
           cx="48" cy="48" r={radius} stroke={color} strokeWidth="7" fill="none" strokeLinecap="round"
           strokeDasharray={circumference} strokeDashoffset={offset}
@@ -53,20 +60,32 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
       onClick={copy}
       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white/[0.04] border border-border/40 text-muted-foreground hover:text-foreground hover:border-border transition-all"
     >
-      {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
       {copied ? 'Copied' : (label || 'Copy')}
     </button>
   )
 }
 
 const confidenceStyle: Record<string, string> = {
-  high: 'bg-emerald-400/12 text-emerald-300 border-emerald-400/25',
-  medium: 'bg-amber-400/12 text-amber-300 border-amber-400/25',
-  low: 'bg-rose-400/12 text-rose-300 border-rose-400/25',
+  high: 'bg-primary/12 text-primary border-primary/25',
+  medium: 'bg-white/[0.05] text-foreground/80 border-white/10',
+  low: 'bg-white/[0.04] text-muted-foreground border-white/10',
   none: 'bg-white/[0.04] text-muted-foreground border-border/40',
 }
 
+// Seniority-fit chip: label + tint for each verdict the matcher can return.
+const seniorityFitStyle: Record<string, string> = {
+  'good fit': 'bg-primary/12 text-primary border-primary/25',
+  'under-qualified': 'bg-white/[0.05] text-foreground/80 border-white/10',
+  'over-qualified': 'bg-white/[0.05] text-foreground/80 border-white/10',
+}
+
 export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
+  // Lets us purge a stale resume/session from the whole app if the backend
+  // reports it no longer has our resume. emailTemplate is the optional custom
+  // draft the user entered on the jobs page — passed through so the backend
+  // personalizes it for this job instead of auto-writing from scratch.
+  const { setResume, setSessionId, emailTemplate } = useRoles()
   const [match, setMatch] = useState<MatchResult | null>(null)
   const [contact, setContact] = useState<ContactInfo | null>(null)
   const [email, setEmail] = useState<EmailDraft | null>(null)
@@ -89,7 +108,7 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
     setError(null); setMatch(null); setContact(null); setEmail(null); setStage('scoring')
 
     APIClient.matchJobStream(
-      { session_id: sessionId, title: job.title, company: job.company, location: job.location, link: job.link },
+      { session_id: sessionId, title: job.title, company: job.company, location: job.location, link: job.link, email_template: emailTemplate || undefined },
       {
         signal: controller.signal,
         onScore: (m) => { setMatch(m); setStage('contacts') },
@@ -100,10 +119,21 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
           setStage('done')
         },
         onDone: () => setStage('done'),
-        onError: (msg) => setError(msg),
+        onError: (msg) => {
+          // Stale/expired session: the cached score was misleading. Wipe it so
+          // the modal falls back to the "upload your resume first" gate and the
+          // Resume page no longer shows a phantom analysis. (Roles are kept —
+          // job search doesn't need a session.)
+          if (STALE_SESSION_RE.test(msg)) {
+            setResume(null)
+            setSessionId(null)
+          } else {
+            setError(msg)
+          }
+        },
       }
     )
-  }, [sessionId, job])
+  }, [sessionId, job, setResume, setSessionId, emailTemplate])
 
   useEffect(() => { runMatch() }, [runMatch])
 
@@ -214,22 +244,27 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
                 {match ? (
                   <>
                     <p className="text-sm font-medium">{match.summary}</p>
+                    {match.seniority_fit && match.seniority_fit !== 'unknown' && (
+                      <span className={cn('inline-block mt-2 px-2 py-0.5 rounded-full text-[10px] border capitalize', seniorityFitStyle[match.seniority_fit] || confidenceStyle.none)}>
+                        Seniority: {match.seniority_fit}
+                      </span>
+                    )}
                     {match.matched_skills.length > 0 && (
                       <div className="mt-2">
-                        <p className="text-[10px] text-emerald-300/80 uppercase tracking-wide mb-1">You have</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">You have</p>
                         <div className="flex flex-wrap gap-1">
                           {match.matched_skills.map(s => (
-                            <span key={s} className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-400/12 text-emerald-300 border border-emerald-400/25">{s}</span>
+                            <span key={s} className="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary border border-primary/20">{s}</span>
                           ))}
                         </div>
                       </div>
                     )}
                     {match.missing_skills.length > 0 && (
                       <div className="mt-2">
-                        <p className="text-[10px] text-amber-300/80 uppercase tracking-wide mb-1">Mentioned in JD, not on resume</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Mentioned in JD, not on resume</p>
                         <div className="flex flex-wrap gap-1">
                           {match.missing_skills.map(s => (
-                            <span key={s} className="px-2 py-0.5 rounded-full text-[10px] bg-amber-400/10 text-amber-300 border border-amber-400/20">{s}</span>
+                            <span key={s} className="px-2 py-0.5 rounded-full text-[10px] bg-white/[0.05] text-foreground/70 border border-white/10">{s}</span>
                           ))}
                         </div>
                       </div>
@@ -259,7 +294,7 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
             {/* ---- Contact info ---- */}
             <div className="glass-card rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Phone className="h-3.5 w-3.5 text-accent" />
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Company contact</span>
                 {contact && contact.source !== 'none' && (
                   <span className={cn('ml-auto px-2 py-0.5 rounded-full text-[10px] border', confidenceStyle[contact.confidence] || confidenceStyle.none)}>
@@ -278,7 +313,7 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
                 <div className="space-y-2">
                   {contact.emails.map(e => (
                     <div key={e} className="flex items-center gap-2 text-sm">
-                      <Mail className="h-3.5 w-3.5 text-accent flex-shrink-0" />
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                       <span className="truncate flex-1">{e}</span>
                       <button onClick={() => setRecipient(e)} className="text-[11px] text-primary hover:underline">Use</button>
                       <CopyButton text={e} />
@@ -286,7 +321,7 @@ export function JobMatchModal({ job, sessionId, onClose }: JobMatchModalProps) {
                   ))}
                   {contact.phones.map(p => (
                     <div key={p} className="flex items-center gap-2 text-sm">
-                      <Phone className="h-3.5 w-3.5 text-accent flex-shrink-0" />
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                       <span className="truncate flex-1">{p}</span>
                       <CopyButton text={p} />
                     </div>

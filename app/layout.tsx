@@ -36,7 +36,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
+        <div className="grid-bg" aria-hidden="true" />
         <div className="aurora" aria-hidden="true" />
+        <div className="noise" aria-hidden="true" />
         <RolesProvider>
           <div className="relative z-10 flex flex-col min-h-screen">
             <SiteHeader />
